@@ -1,8 +1,7 @@
 package com.mcb.creditfactory.service;
 
-import com.mcb.creditfactory.dto.CarDto;
 import com.mcb.creditfactory.dto.Collateral;
-import com.mcb.creditfactory.service.car.CarService;
+import com.mcb.creditfactory.model.CollateralModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,37 +11,43 @@ import java.util.Optional;
 @Service
 public class CollateralService {
     @Autowired
-    private CarService carService;
+    private ServiceFactory serviceFactory;
 
     @SuppressWarnings("ConstantConditions")
     public Long saveCollateral(Collateral object) {
-        if (!(object instanceof CarDto)) {
-            throw new IllegalArgumentException();
-        }
-
-        CarDto car = (CarDto) object;
-        boolean approved = carService.approve(car);
-        if (!approved) {
+        ICollateralService<CollateralModel, Collateral> collateralService = serviceFactory.getCollateralService(object);
+        if (collateralService == null) throw new IllegalArgumentException();
+        boolean approve = collateralService.approve(object);
+        if (!approve) {
             return null;
         }
+        boolean exists = getInfo(object) != null;
+        if (exists) return appendCollateralAssessments(object);
+        return Optional.of(object)
+                .map(collateralService::fromDto)
+                .map(collateralService::save)
+                .map(collateralService::getId)
+                .orElse(null);
+    }
 
-        return Optional.of(car)
-                .map(carService::fromDto)
-                .map(carService::save)
-                .map(carService::getId)
+    private Long appendCollateralAssessments(Collateral object) {
+        ICollateralService<CollateralModel, Collateral> collateralService = serviceFactory.getCollateralService(object);
+        if (collateralService == null) throw new IllegalArgumentException();
+        return Optional.of(object)
+                .map(collateralService::fromDto)
+                .map(collateralService::appendAssessments)
+                .map(collateralService::getId)
                 .orElse(null);
     }
 
     public Collateral getInfo(Collateral object) {
-        if (!(object instanceof CarDto)) {
-            throw new IllegalArgumentException();
-        }
-
-        return Optional.of((CarDto) object)
-                .map(carService::fromDto)
-                .map(carService::getId)
-                .flatMap(carService::load)
-                .map(carService::toDTO)
+        ICollateralService<CollateralModel, Collateral> collateralService = serviceFactory.getCollateralService(object);
+        if (collateralService == null) throw new IllegalArgumentException();
+        return Optional.of(object)
+                .map(collateralService::fromDto)
+                .map(collateralService::getId)
+                .flatMap(collateralService::load)
+                .map(collateralService::toDTO)
                 .orElse(null);
     }
 }

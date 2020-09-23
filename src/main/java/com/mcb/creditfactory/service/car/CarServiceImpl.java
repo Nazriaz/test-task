@@ -40,7 +40,7 @@ public class CarServiceImpl implements CarService {
                 dto.getModel(),
                 dto.getPower(),
                 dto.getYear(),
-                dto.getValue()
+                dto.getAssessments()
         );
     }
 
@@ -52,12 +52,19 @@ public class CarServiceImpl implements CarService {
                 car.getModel(),
                 car.getPower(),
                 car.getYear(),
-                car.getValue()
+                car.getAssessments()
         );
     }
 
     @Override
     public Long getId(Car car) {
         return car.getId();
+    }
+
+    @Override
+    public Car appendAssessments(Car car) {
+        Car car1 = carRepository.findById(car.getId()).get();
+        car1.getAssessments().addAll(car.getAssessments());
+        return carRepository.save(car1);
     }
 }
